@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SynthPay — Per-Request API Billing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg:     #03030a;
+    --card:   #0f0f1a;
+    --border: #1a1a2e;
+    --cyan:   #00e5ff;
+    --green:  #10b981;
+    --amber:  #f59e0b;
+    --white:  #e2e8f0;
+    --grey:   #64748b;
+    --dkgrey: #334155;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(3,3,10,0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    color: var(--cyan);
+    letter-spacing: 4px;
+    font-weight: 700;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--grey);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--white); }
+
+  .nav-cta {
+    background: var(--cyan);
+    color: var(--bg);
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    transition: opacity 0.2s;
+  }
+
+  .nav-cta:hover { opacity: 0.85; }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    border: 1px solid rgba(0,229,255,0.3);
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  h1 {
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--cyan);
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--grey);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .btn-primary {
+    background: var(--cyan);
+    color: var(--bg);
+    padding: 16px 36px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--white);
+    padding: 16px 36px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .btn-secondary:hover { border-color: var(--grey); transform: translateY(-2px); }
+
+  /* Stats bar */
+  .stats-bar {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin: 0 auto;
+    max-width: 800px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+
+  .stat {
+    flex: 1;
+    padding: 32px 24px;
+    text-align: center;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(24px, 4vw, 36px);
+    font-weight: 700;
+    color: var(--cyan);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--dkgrey);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Section */
+  section {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 100px 24px;
+  }
+
+  .section-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  h2 {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+
+  .section-sub {
+    font-size: 18px;
+    color: var(--grey);
+    max-width: 500px;
+    line-height: 1.7;
+    margin-bottom: 64px;
+  }
+
+  /* How it works */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .step:hover {
+    border-color: rgba(0,229,255,0.3);
+    transform: translateY(-4px);
+  }
+
+  .step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .step h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .step p {
+    font-size: 15px;
+    color: var(--grey);
+    line-height: 1.7;
+  }
+
+  /* Code block */
+  .code-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+  }
+
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ef4444; }
+  .dot-y { background: #f59e0b; }
+  .dot-g { background: #10b981; }
+
+  .code-file {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--grey);
+    margin-left: 8px;
+  }
+
+  pre {
+    padding: 32px;
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .kw { color: #c084fc; }
+  .fn { color: var(--cyan); }
+  .str { color: var(--green); }
+  .cm { color: var(--dkgrey); }
+  .num { color: var(--amber); }
+
+  /* Proof section */
+  .proof-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  @media (max-width: 768px) {
+    .proof-grid { grid-template-columns: 1fr; }
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .stats-bar { flex-direction: column; }
+    .stat { border-right: none; border-bottom: 1px solid var(--border); }
+    .stat:last-child { border-bottom: none; }
+  }
+
+  .proof-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+  }
+
+  .proof-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .proof-card p {
+    font-size: 14px;
+    color: var(--grey);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+
+  .proof-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--green);
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 6px;
+    padding: 12px 16px;
+    word-break: break-all;
+  }
+
+  /* CTA section */
+  .cta-section {
+    text-align: center;
+    padding: 100px 24px;
+  }
+
+  .cta-section h2 { margin-bottom: 16px; }
+
+  .cta-section p {
+    font-size: 18px;
+    color: var(--grey);
+    margin-bottom: 48px;
+  }
+
+  /* Footer */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 40px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  footer p {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--dkgrey);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--dkgrey);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--grey); }
+
+  /* Cyan bottom bar */
+  .cyan-bar {
+    height: 4px;
+    background: var(--cyan);
+    width: 100%;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Live counter */
+  .live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">SYNTHPAY</div>
+  <ul class="nav-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#proof">Audit proof</a></li>
+    <li><a href="https://dashboard.synthpay.tech">Merchant login</a></li>
+  </ul>
+  <a href="https://wallet.synthpay.tech" class="nav-cta">Account →</a>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <span class="hero-tag">⚡ API Micropayments Infrastructure</span>
+  <h1>Charge per request.<br><em>Not per month.</em></h1>
+  <p class="hero-sub">
+    SynthPay lets API companies charge $0.002 per call — 
+    not $20 per month. One line of code. 
+    Stripe holds the funds. You keep 98.5%.
+  </p>
+  <div class="hero-actions">
+    <a href="https://wallet.synthpay.tech" class="btn-primary">Create Account →</a>
+    <a href="https://dashboard.synthpay.tech" class="btn-secondary">Merchant Dashboard</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div style="position:relative;z-index:1;padding:0 24px 100px;max-width:900px;margin:0 auto;">
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-value">$0.00001</span>
+      <span class="stat-label">Min charge</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">38ms</span>
+      <span class="stat-label">Settlement</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">1 line</span>
+      <span class="stat-label">Integration</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">98.5%</span>
+      <span class="stat-label">To merchant</span>
+    </div>
+  </div>
+</div>
+
+<!-- How it works -->
+<section id="how">
+  <span class="section-tag">// HOW IT WORKS</span>
+  <h2>Three steps.<br>First revenue today.</h2>
+  <p class="section-sub">
+    No migration. No new billing system.
+    No subscription forcing.
+  </p>
+  <div class="steps">
+    <div class="step">
+      <span class="step-num">01 — MERCHANT</span>
+      <h3>Install the middleware</h3>
+      <p>One npm install. One line of code before your existing API handler. Your endpoint is now monetised per request at any price you set.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">02 — USER</span>
+      <h3>Create an account with Face ID</h3>
+      <p>No email. No password. No subscription form. Users load an account once with any card. Every API call deducts automatically.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">03 — YOU</span>
+      <h3>Watch the dashboard</h3>
+      <p>Real-time earnings. Every transaction verified. Withdraw anytime. Stripe holds your funds — not us.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Code -->
+<section>
+  <span class="section-tag">// INTEGRATION</span>
+  <h2>One line of code.</h2>
+  <p class="section-sub">
+    Add it before your existing handler.
+    Remove it in 30 seconds if you want.
+  </p>
+  <div class="code-section">
+    <div class="code-header">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="code-file">api/search.ts</span>
+    </div>
+    <pre><span class="cm">// Before SynthPay</span>
+<span class="kw">app</span>.<span class="fn">use</span>(<span class="str">'/api/search'</span>, yourExistingHandler)
+
+<span class="cm">// After SynthPay — one line added</span>
+<span class="kw">app</span>.<span class="fn">use</span>(<span class="str">'/api/search'</span>,
+  <span class="fn">synthpay</span>({
+    merchant_id: <span class="str">'your_merchant_id'</span>,
+    api_key:     <span class="str">'your_api_key'</span>,
+    price:       <span class="num">0.002</span>   <span class="cm">// $0.002 per request</span>
+  }),
+  yourExistingHandler
+)</pre>
+  </div>
+</section>
+
+<!-- Live Ledger Counter -->
+<section id="proof">
+  <span class="section-tag">// LIVE LEDGER</span>
+  <h2>The ledger is public.<br><em>Always.</em></h2>
+  <p class="section-sub">
+    Every transaction cryptographically verified in real time.
+    No login. No request. Just proof.
+  </p>
+
+  <div id="live-counter" style="background:#0a0a14;border:1px solid rgba(0,229,255,0.2);border-radius:16px;overflow:hidden;box-shadow:0 0 60px rgba(0,229,255,0.06);margin-bottom:48px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #0d0d1e;background:rgba(0,229,255,0.03);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="live-dot"></div>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:#00e5ff;letter-spacing:3px;">LIVE LEDGER</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="chain-status" style="font-family:'Space Mono',monospace;font-size:11px;color:#10b981;">✓ CHAIN VERIFIED</span>
+        <span id="last-updated" style="font-family:'Space Mono',monospace;font-size:10px;color:#334155;"></span>
+      </div>
+    </div>
+
+    <!-- Main stats grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#0d0d1e;">
+      <div style="background:#0a0a14;padding:28px;">
+        <div id="stat-calls" style="font-family:'Space Mono',monospace;font-size:clamp(28px,4vw,40px);font-weight:700;color:#00e5ff;margin-bottom:8px;transition:all 0.3s;">—</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#334155;letter-spacing:2px;">API CALLS SETTLED</div>
+      </div>
+      <div style="background:#0a0a14;padding:28px;">
+        <div id="stat-volume" style="font-family:'Space Mono',monospace;font-size:clamp(28px,4vw,40px);font-weight:700;color:#10b981;margin-bottom:8px;transition:all 0.3s;">—</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#334155;letter-spacing:2px;">VOLUME PROCESSED</div>
+      </div>
+      <div style="background:#0a0a14;padding:28px;">
+        <div id="stat-merchants" style="font-family:'Space Mono',monospace;font-size:clamp(22px,3vw,32px);font-weight:700;color:#f59e0b;margin-bottom:8px;">—</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#334155;letter-spacing:2px;">ACTIVE MERCHANTS</div>
+      </div>
+      <div style="background:#0a0a14;padding:28px;">
+        <div id="stat-users" style="font-family:'Space Mono',monospace;font-size:clamp(22px,3vw,32px);font-weight:700;color:#a855f7;margin-bottom:8px;">—</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#334155;letter-spacing:2px;">REGISTERED USERS</div>
+      </div>
+    </div>
+
+    <!-- Chain hash -->
+    <div style="padding:14px 24px;border-top:1px solid #0d0d1e;display:flex;justify-content:space-between;">
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#1a3a2a;">CHAIN HASH</span>
+      <span id="chain-hash" style="font-family:'Space Mono',monospace;font-size:11px;color:#1a3a2a;">—</span>
+    </div>
+
+    <!-- Merchant breakdown -->
+    <div id="merchant-breakdown" style="border-top:1px solid #0d0d1e;"></div>
+
+    <!-- Footer -->
+    <div style="padding:12px 24px;background:rgba(0,229,255,0.02);border-top:1px solid #0d0d1e;">
+      <a href="https://trustledger-production.up.railway.app/audit/live"
+         target="_blank"
+         style="font-family:'Space Mono',monospace;font-size:11px;color:#334155;text-decoration:none;letter-spacing:1px;">
+        VIEW FULL AUDIT PROOF →
+      </a>
+    </div>
+  </div>
+
+  <div class="proof-grid">
+    <div class="proof-card">
+      <h3>Cryptographic Chain</h3>
+      <p>Every transaction hashed to the previous one. Tampering breaks the chain instantly.</p>
+      <div class="proof-value">SHA-256 hash chain · Append-only ledger</div>
+    </div>
+    <div class="proof-card">
+      <h3>Public Verification</h3>
+      <p>Anyone can verify the ledger at any time. No auth required. No login.</p>
+      <div class="proof-value">GET /audit/live → verified in real time</div>
+    </div>
+    <div class="proof-card">
+      <h3>True Currency Values</h3>
+      <p>No credits. No tokens. Every transaction in real dollars to 8 decimal places.</p>
+      <div class="proof-value">$0.00200000 charged · $0.00196970 to merchant</div>
+    </div>
+    <div class="proof-card">
+      <h3>Stripe Custody</h3>
+      <p>All funds held by Stripe — not SynthPay. Withdraw anytime.</p>
+      <div class="proof-value">Funds: Stripe · Accounting: SynthPay</div>
+    </div>
+  </div>
+</section> 
+
+
+
+<!-- CTA -->
+<section class="cta-section">
+ <!-- For Users -->
+    <section id="users">
+    <span class="section-tag">// FOR USERS</span>
+    <h2>Pay only for<br><em>what you use.</em></h2>
+    <p class="section-sub">
+        No subscriptions. No commitments.
+        Load once and spend as you go.
+    </p>
+    <div class="steps">
+        <div class="step">
+        <span class="step-num">01 — CREATE</span>
+        <h3>Account in 4 seconds</h3>
+        <p>Face ID or fingerprint. No email. No password. No forms. Your account is ready instantly — secured by the same technology as your phone's banking app.</p>
+        </div>
+        <div class="step">
+        <span class="step-num">02 — LOAD</span>
+        <h3>Add funds once</h3>
+        <p>Load $5, $10, or $20 with any card. Your balance stays in your wallet until you spend it. Stripe holds your money — not us.</p>
+        </div>
+        <div class="step">
+        <span class="step-num">03 — USE</span>
+        <h3>Pay per use — nothing more</h3>
+        <p>Every API call costs fractions of a cent. No monthly bill. No surprise charges. Check your balance any time. Every transaction is on your statement.</p>
+        </div>
+    </div>
+
+    <div style="margin-top:48px;">
+        <div class="proof-grid">
+        <div class="proof-card" style="border-color:rgba(0,229,255,0.15);">
+            <h3 style="color:var(--cyan);">No subscription traps</h3>
+            <p>You pay $0.002 for one search. Not $20 for a month you barely use. Stop paying for tools you use twice a month.</p>
+            <div class="proof-value" style="color:var(--cyan);background:rgba(0,229,255,0.05);border-color:rgba(0,229,255,0.15);">
+            Pay $0.002 · Not $20.00/month
+            </div>
+        </div>
+        <div class="proof-card" style="border-color:rgba(16,185,129,0.15);">
+            <h3 style="color:var(--green);">Your money stays yours</h3>
+            <p>Unspent balance never expires. Use it today or use it in six months. No pressure, no deadlines, no hidden deductions.</p>
+            <div class="proof-value">
+                Balance never expires · Use at your pace
+            </div>
+        </div>
+        <div class="proof-card" style="border-color:rgba(245,158,11,0.15);">
+            <h3 style="color:var(--amber);">Full transaction history</h3>
+            <p>Every cent accounted for. See exactly what you spent, when, and on which service. No mystery charges.</p>
+            <div class="proof-value" style="color:var(--amber);background:rgba(245,158,11,0.05);border-color:rgba(245,158,11,0.15);">
+            Real currency · 8 decimal precision
+            </div>
+        </div>
+        <div class="proof-card" style="border-color:rgba(168,85,247,0.15);">
+            <h3 style="color:#a855f7;">Biometric security</h3>
+            <p>Your account is protected by Face ID or fingerprint. No passwords to forget. No emails to verify. No accounts to hack.</p>
+            <div class="proof-value" style="color:#a855f7;background:rgba(168,85,247,0.05);border-color:rgba(168,85,247,0.15);">
+            WebAuthn FIDO2 · Zero passwords
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div style="text-align:center;margin-top:64px;">
+        <a href="https://wallet.synthpay.tech" class="btn-primary">
+        Create Your Account →
+        </a>
+    </div>
+    </section>
+</section>
+
+<footer>
+  <p>© 2026 SynthPay · Abu Dhabi, UAE · ADGM</p>
+  <ul class="footer-links">
+    <li><a href="https://dashboard.synthpay.tech">Merchants</a></li>
+    <li><a href="https://wallet.synthpay.tech">Wallet</a></li>
+    <li><a href="/audit.html">Audit</a></li>
+  </ul>
+</footer>
+<div class="cyan-bar"></div>
+
+<script>
+const AUDIT_URL = 'https://trustledger-production.up.railway.app/audit/live'
+let lastFetch = null
+
+function animateCount(el, target, prefix = '', decimals = 0) {
+  const start = parseFloat(el.dataset.value || '0')
+  const diff  = target - start
+  if (Math.abs(diff) < 0.000001) return
+  const duration = 1000
+  const startTime = performance.now()
+  const tick = (now) => {
+    const progress = Math.min((now - startTime) / duration, 1)
+    const ease = 1 - Math.pow(1 - progress, 3)
+    const current = start + diff * ease
+    el.textContent = prefix + (decimals > 0 ? current.toFixed(decimals) : Math.round(current).toLocaleString())
+    el.dataset.value = current
+    if (progress < 1) requestAnimationFrame(tick)
+    else el.dataset.value = target
+  }
+  requestAnimationFrame(tick)
+}
+
+async function fetchStats() {
+  try {
+    const res  = await fetch(AUDIT_URL)
+    const data = await res.json()
+    lastFetch  = new Date()
+
+    animateCount(document.getElementById('stat-calls'),     data.total_api_calls,  '', 0)
+    animateCount(document.getElementById('stat-volume'),    data.total_volume_raw, '$', 4)
+    animateCount(document.getElementById('stat-merchants'), data.total_merchants,  '', 0)
+    animateCount(document.getElementById('stat-users'),     data.total_users,      '', 0)
+
+    const hashEl = document.getElementById('chain-hash')
+    if (hashEl) hashEl.textContent = data.chain_hash.slice(0, 32) + '...'
+
+    const statusEl = document.getElementById('chain-status')
+    if (statusEl) {
+      statusEl.textContent = data.chain_valid ? '✓ CHAIN VERIFIED' : '✗ ANOMALY DETECTED'
+      statusEl.style.color = data.chain_valid ? '#10b981' : '#ef4444'
+    }
+
+    // Merchant breakdown
+    const breakdown = document.getElementById('merchant-breakdown')
+    if (breakdown && data.merchant_breakdown?.length > 0) {
+      breakdown.innerHTML = data.merchant_breakdown.slice(0, 4).map((m, i, arr) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 24px;${i < arr.length - 1 ? 'border-bottom:1px solid #0d0d1e;' : ''}">
+          <span style="font-family:'Space Mono',monospace;font-size:12px;color:#64748b;">${m.merchant}</span>
+          <div style="display:flex;gap:20px;">
+            <span style="font-family:'Space Mono',monospace;font-size:12px;color:#334155;">${m.api_calls} calls</span>
+            <span style="font-family:'Space Mono',monospace;font-size:12px;color:#10b981;">${m.volume}</span>
+          </div>
+        </div>
+      `).join('')
+    }
+  } catch (e) {
+    console.warn('Audit fetch failed', e)
+  }
+}
+
+// Update "X seconds ago" every second
+setInterval(() => {
+  if (!lastFetch) return
+  const sec = Math.floor((Date.now() - lastFetch.getTime()) / 1000)
+  const el  = document.getElementById('last-updated')
+  if (el) el.textContent = `· ${sec}s ago`
+}, 1000)
+
+// Fetch on load and every 10 seconds
+fetchStats()
+setInterval(fetchStats, 10000)
+</script>
+<script
+  src="https://intentlayer-production.up.railway.app/widget.js"
+  data-key="il_live_8481daae24b3877b4b8edbb8fb09bd72"
+></script>
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0A0906;
+  color: #F0EEE8;
+  /* ── REBRAND: DM Sans + DM Mono replace system-ui ─────────────────────
+     Import is handled via index.html <link> tag or via Vite config.
+     If using Vite, add to vite.config or add <link> to index.html:
+     https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;900&family=DM+Mono:wght@300;400;500&display=swap
+  ── */
+  font-family: 'DM Sans', 'DM Mono', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Global amber accent — overrides any cyan/blue Tailwind defaults ──── */
+/* These custom properties are available to all components via CSS vars */
+:root {
+  --color-accent:       #F0A500;
+  --color-accent-light: #FFC84A;
+  --color-accent-pale:  rgba(240, 165, 0, 0.08);
+  --color-accent-border:rgba(240, 165, 0, 0.20);
+  --color-bg:           #0A0906;
+  --color-surface:      #111009;
+  --color-surface-2:    #181610;
+  --color-border:       #222018;
+  --color-text-1:       #F0EEE8;
+  --color-text-2:       #C8C4BC;
+  --color-text-3:       #7A7670;
+  --color-text-4:       #3A3830;
+  --color-silver:       #A8B0BC;
+}

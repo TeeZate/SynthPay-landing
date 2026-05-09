@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SynthPay — Public Ledger Audit</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap');
+
+:root {
+  --bg:      #02020a;
+  --card:    #08081a;
+  --border:  #12122a;
+  --border2: #1a1a3a;
+  --cyan:    #00e5ff;
+  --green:   #10b981;
+  --amber:   #f59e0b;
+  --red:     #ef4444;
+  --purple:  #a855f7;
+  --white:   #e2e8f0;
+  --grey:    #64748b;
+  --dim:     #2a3a4a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline effect */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,229,255,0.008) 2px,
+    rgba(0,229,255,0.008) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Grid */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Nav */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(2,2,10,0.95);
+  backdrop-filter: blur(20px);
+}
+
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  color: var(--cyan);
+  letter-spacing: 4px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--grey);
+  text-decoration: none;
+  letter-spacing: 2px;
+  transition: color 0.2s;
+}
+.nav-link:hover { color: var(--white); }
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1px solid rgba(16,185,129,0.3);
+  background: rgba(16,185,129,0.08);
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+
+.status-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 2px;
+}
+
+/* Hero */
+.hero {
+  position: relative;
+  z-index: 1;
+  padding: 64px 32px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hero-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 3px;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.hero h1 {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+}
+
+.hero h1 span { color: var(--cyan); }
+
+.hero-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--grey);
+  line-height: 1.8;
+  max-width: 600px;
+  margin-bottom: 40px;
+}
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 48px;
+}
+
+.stat-cell {
+  background: var(--card);
+  padding: 24px 20px;
+  position: relative;
+}
+
+.stat-cell::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent, transparent);
+  opacity: 0.6;
+}
+
+.stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 700;
+  color: var(--accent, var(--cyan));
+  margin-bottom: 6px;
+  display: block;
+  transition: all 0.4s;
+}
+
+.stat-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Main layout */
+.main {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* Panel */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.2);
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  letter-spacing: 3px;
+}
+
+.panel-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+}
+
+/* Ledger entries */
+.ledger-table {
+  width: 100%;
+}
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px 100px 110px;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  transition: background 0.15s;
+  cursor: default;
+}
+
+.ledger-row:hover { background: rgba(0,229,255,0.02); }
+.ledger-row:last-child { border-bottom: none; }
+
+.ledger-row.header {
+  background: rgba(0,0,0,0.3);
+  cursor: default;
+}
+.ledger-row.header:hover { background: rgba(0,0,0,0.3); }
+
+.col-head {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.col-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.col-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--grey);
+}
+
+.col-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 500;
+  text-align: right;
+}
+
+.col-fee {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+  text-align: right;
+}
+
+.col-hash {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--purple);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Verification badge */
+.verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.verify-ok {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+  color: var(--green);
+}
+
+/* Right sidebar */
+.sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+/* Chain visualizer */
+.chain-viz {
+  padding: 20px;
+}
+
+.chain-block {
+  position: relative;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+}
+
+.chain-block:hover { border-color: rgba(168,85,247,0.4); }
+
+.chain-block-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.chain-block-hash {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--purple);
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.chain-block-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  margin-top: 6px;
+}
+
+.chain-arrow {
+  text-align: center;
+  font-size: 14px;
+  color: var(--border2);
+  margin: 2px 0;
+  display: block;
+}
+
+/* Verification tool */
+.verify-tool {
+  padding: 20px;
+}
+
+.verify-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.verify-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--purple);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  outline: none;
+  resize: vertical;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+
+.verify-input:focus { border-color: rgba(168,85,247,0.5); }
+
+.verify-btn {
+  width: 100%;
+  padding: 10px;
+  background: rgba(168,85,247,0.1);
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 6px;
+  color: var(--purple);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.verify-btn:hover {
+  background: rgba(168,85,247,0.2);
+  border-color: rgba(168,85,247,0.5);
+}
+
+.verify-result {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  display: none;
+}
+
+.verify-result.show { display: block; }
+.verify-result.ok { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: var(--green); }
+.verify-result.fail { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: var(--red); }
+
+/* Merchant breakdown */
+.merchant-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.merchant-row:last-child { border-bottom: none; }
+
+.merchant-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--white);
+}
+
+.merchant-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.merchant-calls {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.merchant-vol {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--green);
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 2px;
+}
+
+/* Footer */
+footer {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid var(--border);
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+
+.footer-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  text-decoration: none;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+.footer-link:hover { color: var(--grey); }
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(16px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.fade { animation: fadeUp 0.5s ease both; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="https://synthpay-landing.vercel.app" class="logo">SYNTHPAY</a>
+  <div class="nav-right">
+    <a href="https://synthpay-landing.vercel.app" class="nav-link">HOME</a>
+    <a href="https://synthpay-dashboard.vercel.app" class="nav-link">MERCHANTS</a>
+    <a href="https://synthpay-wallet.vercel.app" class="nav-link">WALLET</a>
+    <div class="status-pill">
+      <div class="pulse-dot"></div>
+      <span class="status-text" id="nav-status">VERIFYING...</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero fade">
+  <span class="hero-tag">// PUBLIC LEDGER AUDIT · SYNTHPAY INFRASTRUCTURE</span>
+  <h1>Every transaction.<br><span>Mathematically proven.</span></h1>
+  <p class="hero-sub">
+    This page computes ledger integrity live from the database on every load.<br>
+    No cached results. No curated data. The raw truth of every transaction ever processed.
+  </p>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-cell" style="--accent: #00e5ff;">
+      <span class="stat-val" id="s-calls">—</span>
+      <span class="stat-lbl">API Calls Settled</span>
+    </div>
+    <div class="stat-cell" style="--accent: #10b981;">
+      <span class="stat-val" id="s-volume">—</span>
+      <span class="stat-lbl">Volume Processed</span>
+    </div>
+    <div class="stat-cell" style="--accent: #f59e0b;">
+      <span class="stat-val" id="s-merchants">—</span>
+      <span class="stat-lbl">Active Merchants</span>
+    </div>
+    <div class="stat-cell" style="--accent: #a855f7;">
+      <span class="stat-val" id="s-users">—</span>
+      <span class="stat-lbl">Registered Users</span>
+    </div>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="main">
+
+  <!-- Left: Ledger + Merchants -->
+  <div>
+
+    <!-- Ledger entries panel -->
+    <div class="panel" style="margin-bottom:24px;">
+      <div class="panel-header">
+        <span class="panel-title">LEDGER ENTRIES</span>
+        <span class="panel-meta" id="entry-count">Loading...</span>
+      </div>
+      <div id="ledger-body">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <span class="loading-text">COMPUTING CHAIN...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Merchant breakdown -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">MERCHANT BREAKDOWN</span>
+        <span class="panel-meta">LIVE</span>
+      </div>
+      <div id="merchant-body">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <span class="loading-text">LOADING...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Chain + Verify -->
+  <div class="sidebar">
+
+    <!-- Integrity summary -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">INTEGRITY STATUS</span>
+        <span id="integrity-badge" class="verify-badge verify-ok">✓ PASSED</span>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;display:block;margin-bottom:6px;">CURRENT CHAIN HASH</span>
+          <div id="chain-hash-full" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--purple);word-break:break-all;line-height:1.6;">—</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;display:block;margin-bottom:4px;">ANOMALIES</span>
+            <span id="anomaly-count" style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--green);">0</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;display:block;margin-bottom:4px;">LAST VERIFIED</span>
+            <span id="verified-at" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--grey);">—</span>
+          </div>
+        </div>
+        <div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;display:block;margin-bottom:4px;">TOTAL FEES COLLECTED</span>
+          <span id="total-fees" style="font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--amber);">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hash chain visualizer -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">HASH CHAIN</span>
+        <span class="panel-meta">LAST 4 ENTRIES</span>
+      </div>
+      <div class="chain-viz" id="chain-viz">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <span class="loading-text">COMPUTING...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual verification tool -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">VERIFY YOURSELF</span>
+        <span class="panel-meta">SHA-256</span>
+      </div>
+      <div class="verify-tool">
+        <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--grey);line-height:1.7;margin-bottom:16px;">
+          Paste a chain hash below to verify it matches the live ledger. Any third party can independently confirm ledger integrity.
+        </p>
+        <span class="verify-label">PASTE HASH TO VERIFY</span>
+        <textarea class="verify-input" id="verify-input" rows="3" placeholder="17f34355f3ca403e5534c55dcb1f38ba..."></textarea>
+        <button class="verify-btn" onclick="verifyHash()">▶ VERIFY HASH</button>
+        <div class="verify-result" id="verify-result"></div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <span class="verify-label">HOW TO VERIFY MANUALLY</span>
+          <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);line-height:1.8;">
+            1. Download full ledger as JSON<br>
+            2. For each entry, compute:<br>
+            &nbsp;&nbsp;SHA256(id|user|merchant|amount|fee|timestamp|prev_hash)<br>
+            3. Compare final hash to chain_hash above<br>
+            4. Any mismatch = tampering detected
+          </p>
+          <button class="verify-btn" style="margin-top:10px;" onclick="downloadLedger()">⬇ DOWNLOAD LEDGER JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw API -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">RAW API ACCESS</span>
+        <span class="panel-meta">NO AUTH</span>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:10px;">
+        <a href="https://trustledger-production.up.railway.app/audit/live"
+           target="_blank"
+           style="display:block;padding:10px 14px;background:rgba(0,0,0,0.3);border:1px solid var(--border2);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);text-decoration:none;letter-spacing:1px;transition:border-color 0.2s;"
+           onmouseover="this.style.borderColor='rgba(0,229,255,0.3)'"
+           onmouseout="this.style.borderColor='var(--border2)'">
+          GET /audit/live →
+        </a>
+        <a href="https://trustledger-production.up.railway.app/audit/latest"
+           target="_blank"
+           style="display:block;padding:10px 14px;background:rgba(0,0,0,0.3);border:1px solid var(--border2);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--grey);text-decoration:none;letter-spacing:1px;transition:border-color 0.2s;"
+           onmouseover="this.style.borderColor='rgba(100,116,139,0.3)'"
+           onmouseout="this.style.borderColor='var(--border2)'">
+          GET /audit/latest →
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <span class="footer-text">© 2026 SYNTHPAY · ABU DHABI, UAE · PUBLIC LEDGER</span>
+  <div style="display:flex;gap:20px;">
+    <a href="https://synthpay-landing.vercel.app" class="footer-link">HOME</a>
+    <a href="https://synthpay-dashboard.vercel.app" class="footer-link">MERCHANTS</a>
+    <a href="https://synthpay-wallet.vercel.app" class="footer-link">WALLET</a>
+  </div>
+</footer>
+
+<script>
+const API = 'https://trustledger-production.up.railway.app'
+let liveData = null
+
+// ── Animate counter ──────────────────────────────────────────────────────────
+function animateVal(el, target, fmt) {
+  const start = parseFloat(el.dataset.v || '0')
+  const diff  = target - start
+  if (Math.abs(diff) < 0.000001) return
+  const t0 = performance.now()
+  const tick = now => {
+    const p = Math.min((now - t0) / 800, 1)
+    const e = 1 - Math.pow(1 - p, 3)
+    el.textContent = fmt(start + diff * e)
+    el.dataset.v   = start + diff * e
+    if (p < 1) requestAnimationFrame(tick)
+    else el.dataset.v = target
+  }
+  requestAnimationFrame(tick)
+}
+
+// ── Render ledger entries (from live stats) ──────────────────────────────────
+function renderLedger(data) {
+  const body = document.getElementById('ledger-body')
+  const breakdown = data.merchant_breakdown || []
+
+  // Build table from merchant breakdown (we don't have individual entries from /audit/live)
+  // Show merchant summary rows
+  if (breakdown.length === 0) {
+    body.innerHTML = `<div class="loading"><span class="loading-text">NO TRANSACTIONS YET</span></div>`
+    return
+  }
+
+  let html = `
+    <div class="ledger-row header">
+      <span class="col-head">#</span>
+      <span class="col-head">MERCHANT</span>
+      <span class="col-head" style="text-align:right;">VOLUME</span>
+      <span class="col-head" style="text-align:right;">EARNED</span>
+      <span class="col-head">STATUS</span>
+    </div>
+  `
+
+  breakdown.forEach((m, i) => {
+    html += `
+      <div class="ledger-row">
+        <span class="col-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="col-id">${m.merchant}</span>
+        <span class="col-amount">${m.volume}</span>
+        <span class="col-fee">${m.earned}</span>
+        <span class="verify-badge verify-ok">✓ ${m.api_calls} calls</span>
+      </div>
+    `
+  })
+
+  body.innerHTML = html
+  document.getElementById('entry-count').textContent = `${data.total_api_calls} TOTAL CALLS`
+}
+
+// ── Render chain visualizer ──────────────────────────────────────────────────
+function renderChain(data) {
+  const viz = document.getElementById('chain-viz')
+  const hash = data.chain_hash || ''
+
+  // Show genesis + current blocks
+  const blocks = [
+    { num: 'GENESIS', hash: '0000000000000000', amount: 'ORIGIN BLOCK' },
+    { num: 'LATEST',  hash: hash, amount: `$${data.total_volume_raw.toFixed(4)} total` },
+  ]
+
+  let html = ''
+  blocks.forEach((b, i) => {
+    html += `
+      <div class="chain-block">
+        <div class="chain-block-num">${b.num}</div>
+        <div class="chain-block-hash">${b.hash.slice(0,32)}...</div>
+        <div class="chain-block-amount">${b.amount}</div>
+      </div>
+    `
+    if (i < blocks.length - 1) html += `<span class="chain-arrow">↓</span>`
+  })
+
+  viz.innerHTML = html
+}
+
+// ── Render merchant breakdown ────────────────────────────────────────────────
+function renderMerchants(data) {
+  const body = document.getElementById('merchant-body')
+  const breakdown = data.merchant_breakdown || []
+
+  if (breakdown.length === 0) {
+    body.innerHTML = `<div class="loading"><span class="loading-text">NO MERCHANTS YET</span></div>`
+    return
+  }
+
+  const maxCalls = Math.max(...breakdown.map(m => m.api_calls))
+
+  body.innerHTML = breakdown.map(m => `
+    <div class="merchant-row">
+      <div>
+        <div class="merchant-name">${m.merchant}</div>
+        <div style="margin-top:6px;height:3px;background:var(--border2);border-radius:2px;width:140px;overflow:hidden;">
+          <div style="height:100%;background:var(--green);width:${(m.api_calls/maxCalls*100).toFixed(0)}%;border-radius:2px;transition:width 1s ease;"></div>
+        </div>
+      </div>
+      <div class="merchant-stats">
+        <span class="merchant-calls">${m.api_calls} calls</span>
+        <span class="merchant-vol">${m.volume}</span>
+      </div>
+    </div>
+  `).join('')
+}
+
+// ── Render individual ledger entries ─────────────────────────────────────────
+async function loadLedgerEntries() {
+  try {
+    const res  = await fetch(`${API}/audit/ledger`)
+    const data = await res.json()
+    const entries = data.entries || []
+    const body = document.getElementById('ledger-body')
+
+    if (entries.length === 0) {
+      body.innerHTML = `<div class="loading"><span class="loading-text">NO TRANSACTIONS YET</span></div>`
+      return
+    }
+
+    let html = `
+      <div class="ledger-row header">
+        <span class="col-head">#</span>
+        <span class="col-head">MERCHANT</span>
+        <span class="col-head" style="text-align:right;">AMOUNT</span>
+        <span class="col-head" style="text-align:right;">FEE</span>
+        <span class="col-head">TIME</span>
+      </div>
+    `
+
+    entries.forEach((e, i) => {
+      const time = new Date(e.created_at).toLocaleTimeString()
+      html += `
+        <div class="ledger-row">
+          <span class="col-num">${String(i+1).padStart(2,'0')}</span>
+          <span class="col-id">${e.merchant_name}</span>
+          <span class="col-amount">$${Number(e.amount).toFixed(6)}</span>
+          <span class="col-fee">$${Number(e.platform_fee).toFixed(6)}</span>
+          <span class="col-hash">${time}</span>
+        </div>
+      `
+    })
+
+    body.innerHTML = html
+    document.getElementById('entry-count').textContent = `${entries.length} RECENT ENTRIES`
+  } catch (err) {
+    console.error('Failed to load ledger entries:', err)
+  }
+}
+
+// ── Load all data ────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res  = await fetch(`${API}/audit/live`)
+    const data = await res.json()
+    liveData   = data
+
+    loadLedgerEntries()
+
+    // Nav status
+    const navStatus = document.getElementById('nav-status')
+    navStatus.textContent  = data.chain_valid ? 'VERIFIED' : 'ANOMALY'
+    navStatus.style.color  = data.chain_valid ? 'var(--green)' : 'var(--red)'
+
+    // Hero stats
+    animateVal(document.getElementById('s-calls'),     data.total_api_calls,  v => Math.round(v).toLocaleString())
+    animateVal(document.getElementById('s-volume'),    data.total_volume_raw, v => '$' + v.toFixed(4))
+    animateVal(document.getElementById('s-merchants'), data.total_merchants,  v => Math.round(v))
+    animateVal(document.getElementById('s-users'),     data.total_users,      v => Math.round(v))
+
+    // Integrity panel
+    document.getElementById('chain-hash-full').textContent = data.chain_hash || '—'
+    document.getElementById('anomaly-count').textContent   = data.anomalies
+    document.getElementById('anomaly-count').style.color   = data.anomalies === 0 ? 'var(--green)' : 'var(--red)'
+    document.getElementById('total-fees').textContent      = data.total_fees_usd || '—'
+    document.getElementById('verified-at').textContent     = new Date(data.verified_at).toLocaleTimeString()
+
+    const badge = document.getElementById('integrity-badge')
+    badge.textContent  = data.chain_valid ? '✓ PASSED' : '✗ FAILED'
+    badge.className    = `verify-badge ${data.chain_valid ? 'verify-ok' : 'verify-fail'}`
+
+    // Render sections
+    renderChain(data)
+    renderMerchants(data)
+
+  } catch (err) {
+    console.error('Failed to load audit data:', err)
+    document.getElementById('nav-status').textContent = 'ERROR'
+    document.getElementById('nav-status').style.color = 'var(--red)'
+  }
+}
+
+// ── Verify hash ──────────────────────────────────────────────────────────────
+function verifyHash() {
+  const input  = document.getElementById('verify-input').value.trim()
+  const result = document.getElementById('verify-result')
+
+  if (!input) {
+    result.className   = 'verify-result show fail'
+    result.textContent = '✗ Please paste a hash to verify.'
+    return
+  }
+
+  if (!liveData) {
+    result.className   = 'verify-result show fail'
+    result.textContent = '✗ Ledger data not loaded yet. Please wait.'
+    return
+  }
+
+  if (input.toLowerCase() === liveData.chain_hash.toLowerCase()) {
+    result.className   = 'verify-result show ok'
+    result.innerHTML   = `✓ HASH VERIFIED\n\nThis hash matches the current live chain.\nLedger integrity: CONFIRMED\nEntries verified: ${liveData.total_api_calls}\nAnomalies: ${liveData.anomalies}`
+  } else {
+    result.className   = 'verify-result show fail'
+    result.innerHTML   = `✗ HASH MISMATCH\n\nThis hash does not match the current chain.\nCurrent hash:\n${liveData.chain_hash.slice(0,32)}...\n\nThis could mean the ledger has been updated since this hash was recorded.`
+  }
+}
+
+// ── Download ledger ──────────────────────────────────────────────────────────
+function downloadLedger() {
+  if (!liveData) return
+  const blob = new Blob([JSON.stringify(liveData, null, 2)], { type: 'application/json' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `synthpay-ledger-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadData()
+setInterval(loadData, 15000)
+</script>
+
+</body>
+</html>

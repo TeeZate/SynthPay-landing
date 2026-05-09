@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SynthPay Admin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg:     #02020a;
+  --card:   #07071a;
+  --card2:  #0a0a1e;
+  --border: #12122a;
+  --border2:#1a1a3a;
+  --cyan:   #00e5ff;
+  --green:  #10b981;
+  --amber:  #f59e0b;
+  --red:    #ef4444;
+  --purple: #a855f7;
+  --white:  #e2e8f0;
+  --grey:   #64748b;
+  --dim:    #2a3a4a;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+#sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 220px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.logo {
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--cyan);
+  letter-spacing: 3px;
+  font-weight: 700;
+  display: block;
+}
+
+.logo-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  margin-top: 4px;
+  display: block;
+}
+
+.nav-items {
+  padding: 16px 12px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--grey);
+  margin-bottom: 4px;
+  transition: all 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.nav-item:hover { background: rgba(255,255,255,0.04); color: var(--white); }
+.nav-item.active { background: rgba(0,229,255,0.08); color: var(--cyan); }
+
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+
+.status-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 1px;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* Main content */
+#main {
+  margin-left: 220px;
+  min-height: 100vh;
+}
+
+/* Header */
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(2,2,10,0.9);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--grey);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.refresh-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+.time-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+/* Content */
+#content { padding: 28px; }
+
+/* Login screen */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 28px;
+}
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent, transparent);
+}
+
+.stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent, var(--cyan));
+  margin-bottom: 6px;
+  display: block;
+}
+
+.stat-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.stat-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--grey);
+  margin-top: 6px;
+}
+
+/* Table */
+.table-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.2);
+}
+
+.table-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  letter-spacing: 3px;
+}
+
+.table-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  padding: 10px 16px;
+  text-align: left;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.015); }
+
+.mono { font-family: 'JetBrains Mono', monospace; }
+.green { color: var(--green); }
+.cyan { color: var(--cyan); }
+.amber { color: var(--amber); }
+.red { color: var(--red); }
+.dim { color: var(--dim); }
+.grey { color: var(--grey); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.badge-green { background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+.badge-red   { background: rgba(239,68,68,0.1);  color: var(--red);   border: 1px solid rgba(239,68,68,0.2); }
+.badge-amber { background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+
+.toggle-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--grey);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.2s;
+}
+.toggle-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+/* Search bar */
+.search-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  color: var(--white);
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--cyan); }
+.search-input::placeholder { color: var(--dim); }
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  gap: 12px;
+}
+
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 2px;
+}
+
+/* Revenue chart */
+.chart-container {
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 20px 20px 0;
+}
+
+.chart-bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+  transition: height 0.6s ease;
+  cursor: default;
+  position: relative;
+}
+
+.chart-bar:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--white);
+  white-space: nowrap;
+  z-index: 10;
+}
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: rgba(0,0,0,0.3);
+  color: var(--white);
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.input:focus { border-color: var(--cyan); }
+
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--cyan);
+  color: #02020a;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="login-screen">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:28px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--cyan);letter-spacing:4px;font-weight:700;">SYNTHPAY</span>
+      <span style="display:block;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;margin-top:4px;">ADMIN PANEL</span>
+    </div>
+    <label style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;display:block;margin-bottom:8px;">ADMIN SECRET</label>
+    <input type="password" class="input" id="secret-input" placeholder="Enter admin secret..." />
+    <div id="login-error" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);margin-bottom:12px;display:none;">Invalid secret</div>
+    <button class="btn-primary" onclick="doLogin()">ACCESS ADMIN PANEL →</button>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);text-align:center;margin-top:16px;">synthpay.io · Abu Dhabi, UAE</p>
+  </div>
+</div>
+
+<!-- Admin panel (hidden until login) -->
+<div id="admin-panel" style="display:none;">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="logo">
+      <span class="logo-text">SYNTHPAY</span>
+      <span class="logo-sub">ADMIN PANEL</span>
+    </div>
+    <div class="nav-items">
+      <button class="nav-item active" onclick="showTab('overview')" id="nav-overview">
+        <span class="nav-icon">📊</span> Overview
+      </button>
+      <button class="nav-item" onclick="showTab('merchants')" id="nav-merchants">
+        <span class="nav-icon">🏪</span> Merchants
+      </button>
+      <button class="nav-item" onclick="showTab('users')" id="nav-users">
+        <span class="nav-icon">👥</span> Users
+      </button>
+      <button class="nav-item" onclick="showTab('transactions')" id="nav-transactions">
+        <span class="nav-icon">⚡</span> Transactions
+      </button>
+      <button class="nav-item" onclick="showTab('revenue')" id="nav-revenue">
+        <span class="nav-icon">💰</span> Revenue
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="status-row">
+        <div class="status-dot"></div>
+        <span class="status-label">LIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="header">
+      <span class="header-title" id="page-title">Overview</span>
+      <div class="header-right">
+        <span class="time-badge" id="time-badge"></span>
+        <button class="refresh-btn" onclick="loadCurrentTab()">↻ REFRESH</button>
+      </div>
+    </div>
+    <div id="content">
+      <div class="loading"><div class="spinner"></div><span class="loading-text">LOADING...</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API    = 'https://trustledger-production.up.railway.app'
+let SECRET   = ''
+let currentTab = 'overview'
+let allMerchants = []
+let allUsers = []
+let allTransactions = []
+
+// ── Login ────────────────────────────────────────────────────────────────────
+document.getElementById('secret-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin()
+})
+
+async function doLogin() {
+  const val = document.getElementById('secret-input').value.trim()
+  if (!val) return
+
+  try {
+    const res = await fetch(`${API}/admin/health`, {
+      headers: { 'x-admin-secret': val }
+    })
+    if (res.status === 401) {
+      document.getElementById('login-error').style.display = 'block'
+      return
+    }
+    SECRET = val
+    document.getElementById('login-screen').style.display = 'none'
+    document.getElementById('admin-panel').style.display = 'block'
+    startClock()
+    loadTab('overview')
+  } catch {
+    document.getElementById('login-error').style.display = 'block'
+  }
+}
+
+// ── Clock ────────────────────────────────────────────────────────────────────
+function startClock() {
+  const update = () => {
+    document.getElementById('time-badge').textContent =
+      new Date().toLocaleTimeString('en-GB', { hour12: false })
+  }
+  update()
+  setInterval(update, 1000)
+}
+
+// ── Tab navigation ───────────────────────────────────────────────────────────
+function showTab(tab) {
+  currentTab = tab
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+  document.getElementById('nav-' + tab)?.classList.add('active')
+  const titles = {
+    overview: 'Platform Overview',
+    merchants: 'Merchant Management',
+    users: 'User Management',
+    transactions: 'Transaction Browser',
+    revenue: 'Revenue Analytics'
+  }
+  document.getElementById('page-title').textContent = titles[tab] || tab
+  loadTab(tab)
+}
+
+function loadCurrentTab() { loadTab(currentTab) }
+
+async function loadTab(tab) {
+  setLoading()
+  try {
+    if (tab === 'overview')     await renderOverview()
+    if (tab === 'merchants')    await renderMerchants()
+    if (tab === 'users')        await renderUsers()
+    if (tab === 'transactions') await renderTransactions()
+    if (tab === 'revenue')      await renderRevenue()
+  } catch (err) {
+    setContent(`<div style="padding:40px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--red);">Failed to load: ${err.message}</div>`)
+  }
+}
+
+function setLoading() {
+  setContent('<div class="loading"><div class="spinner"></div><span class="loading-text">LOADING...</span></div>')
+}
+
+function setContent(html) {
+  document.getElementById('content').innerHTML = html
+}
+
+function fmt(n, d=2) { return Number(n || 0).toFixed(d) }
+function fmtN(n) { return Number(n || 0).toLocaleString() }
+function fmtDate(d) { return d ? new Date(d).toLocaleString() : '—' }
+
+async function get(path) {
+  const res = await fetch(`${API}${path}`, { headers: { 'x-admin-secret': SECRET } })
+  return res.json()
+}
+
+// ── OVERVIEW ─────────────────────────────────────────────────────────────────
+async function renderOverview() {
+  const data = await get('/admin/overview')
+
+  const stats = [
+    { val: `$${fmt(data.total_volume, 4)}`, lbl: 'Total Volume',       accent: '#00e5ff', sub: `Today: $${fmt(data.today_volume, 4)}` },
+    { val: `$${fmt(data.total_fees, 4)}`,   lbl: 'Platform Revenue',   accent: '#10b981', sub: `Today: $${fmt(data.today_fees, 4)}` },
+    { val: fmtN(data.total_transactions),   lbl: 'Total Transactions',  accent: '#f59e0b', sub: `Today: ${fmtN(data.today_transactions)}` },
+    { val: fmtN(data.merchants),            lbl: 'Active Merchants',    accent: '#a855f7', sub: '' },
+    { val: fmtN(data.users),                lbl: 'Registered Users',    accent: '#00e5ff', sub: '' },
+    { val: `$${fmt(data.total_merchant_payouts, 4)}`, lbl: 'Paid to Merchants', accent: '#10b981', sub: '98.5% of volume' },
+  ]
+
+  let html = `<div class="stats-grid">${stats.map(s => `
+    <div class="stat-card" style="--accent:${s.accent}">
+      <span class="stat-val">${s.val}</span>
+      <span class="stat-lbl">${s.lbl}</span>
+      ${s.sub ? `<div class="stat-sub">${s.sub}</div>` : ''}
+    </div>
+  `).join('')}</div>`
+
+  // Recent transactions
+  html += `
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">RECENT TRANSACTIONS</span>
+        <span class="table-meta">${data.recent_transactions?.length || 0} LATEST</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>MERCHANT</th><th>AMOUNT</th><th>FEE</th><th>MERCHANT RECEIVES</th><th>TIME</th>
+        </tr></thead>
+        <tbody>
+          ${(data.recent_transactions || []).map(tx => `
+            <tr>
+              <td>${tx.merchant_name}</td>
+              <td class="mono green">$${fmt(tx.amount, 6)}</td>
+              <td class="mono amber">$${fmt(tx.platform_fee, 6)}</td>
+              <td class="mono cyan">$${fmt(tx.merchant_receives, 6)}</td>
+              <td class="mono dim">${fmtDate(tx.created_at)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+  setContent(html)
+}
+
+// ── MERCHANTS ────────────────────────────────────────────────────────────────
+async function renderMerchants(filter = '') {
+  const data = await get('/admin/merchants')
+  allMerchants = data.merchants || []
+
+  const filtered = filter
+    ? allMerchants.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()))
+    : allMerchants
+
+  let html = `
+    <div class="search-row">
+      <input class="search-input" placeholder="Search merchants..." oninput="filterMerchants(this.value)" value="${filter}" />
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">MERCHANTS</span>
+        <span class="table-meta">${filtered.length} of ${allMerchants.length}</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>NAME</th><th>BALANCE</th><th>TOTAL EARNED</th><th>TRANSACTIONS</th><th>STATUS</th><th>JOINED</th><th>ACTION</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.map(m => `
+            <tr>
+              <td style="font-weight:600;">${m.name}</td>
+              <td class="mono cyan">$${fmt(m.balance, 4)}</td>
+              <td class="mono green">$${fmt(m.total_earned, 4)}</td>
+              <td class="mono">${fmtN(m.transaction_count)}</td>
+              <td><span class="badge ${m.active ? 'badge-green' : 'badge-red'}">${m.active ? '● ACTIVE' : '○ INACTIVE'}</span></td>
+              <td class="mono dim">${new Date(m.created_at).toLocaleDateString()}</td>
+              <td><button class="toggle-btn" onclick="toggleMerchant('${m.id}', ${m.active})">${m.active ? 'Deactivate' : 'Activate'}</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+  setContent(html)
+}
+
+function filterMerchants(val) { renderMerchants(val) }
+
+async function toggleMerchant(id, currentActive) {
+  if (!confirm(`${currentActive ? 'Deactivate' : 'Activate'} this merchant?`)) return
+  await fetch(`${API}/admin/merchants/${id}/toggle`, {
+    method: 'PATCH',
+    headers: { 'x-admin-secret': SECRET }
+  })
+  renderMerchants()
+}
+
+// ── USERS ────────────────────────────────────────────────────────────────────
+async function renderUsers(filter = '') {
+  const data = await get('/admin/users')
+  allUsers = data.users || []
+
+  const filtered = filter
+    ? allUsers.filter(u => u.id.includes(filter))
+    : allUsers
+
+  let html = `
+    <div class="search-row">
+      <input class="search-input" placeholder="Search by user ID..." oninput="filterUsers(this.value)" value="${filter}" />
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">USERS</span>
+        <span class="table-meta">${filtered.length} TOTAL</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>USER ID</th><th>BALANCE</th><th>TOTAL DEPOSITED</th><th>TOTAL SPENT</th><th>TRANSACTIONS</th><th>JOINED</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.map(u => `
+            <tr>
+              <td class="mono dim" style="font-size:11px;">${u.id.slice(0,16)}...</td>
+              <td class="mono cyan">$${fmt(u.balance, 4)}</td>
+              <td class="mono green">$${fmt(u.total_deposited, 2)}</td>
+              <td class="mono red">$${fmt(u.total_spent, 6)}</td>
+              <td class="mono">${fmtN(u.transaction_count)}</td>
+              <td class="mono dim">${new Date(u.created_at).toLocaleDateString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+  setContent(html)
+}
+
+function filterUsers(val) { renderUsers(val) }
+
+// ── TRANSACTIONS ─────────────────────────────────────────────────────────────
+async function renderTransactions(filter = '') {
+  const data = await get('/admin/transactions?limit=100')
+  allTransactions = data.transactions || []
+
+  const filtered = filter
+    ? allTransactions.filter(tx =>
+        tx.merchant_name?.toLowerCase().includes(filter.toLowerCase()) ||
+        tx.id?.includes(filter)
+      )
+    : allTransactions
+
+  let html = `
+    <div class="search-row">
+      <input class="search-input" placeholder="Filter by merchant name or transaction ID..." oninput="filterTx(this.value)" value="${filter}" />
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);white-space:nowrap;padding:10px 0;">${filtered.length} results</span>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">LEDGER ENTRIES</span>
+        <span class="table-meta">LATEST ${filtered.length} of ${data.total}</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>ID</th><th>MERCHANT</th><th>AMOUNT</th><th>PLATFORM FEE</th><th>MERCHANT RECEIVES</th><th>BALANCE AFTER</th><th>TIME</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.map(tx => `
+            <tr>
+              <td class="mono dim" style="font-size:10px;">${tx.id?.slice(0,8)}...</td>
+              <td style="font-weight:600;">${tx.merchant_name || '—'}</td>
+              <td class="mono green">$${fmt(tx.amount, 6)}</td>
+              <td class="mono amber">$${fmt(tx.platform_fee, 6)}</td>
+              <td class="mono cyan">$${fmt(tx.merchant_receives, 6)}</td>
+              <td class="mono grey">$${fmt(tx.user_balance_after, 4)}</td>
+              <td class="mono dim" style="font-size:11px;">${fmtDate(tx.created_at)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+  setContent(html)
+}
+
+function filterTx(val) { renderTransactions(val) }
+
+// ── REVENUE ───────────────────────────────────────────────────────────────────
+async function renderRevenue() {
+  const [overview, daily] = await Promise.all([
+    get('/admin/overview'),
+    get('/admin/revenue')
+  ])
+
+  const days = daily.daily || []
+  const maxVol = Math.max(...days.map(d => Number(d.volume) || 0), 0.001)
+
+  let html = `
+    <div class="stats-grid">
+      <div class="stat-card" style="--accent:#10b981;">
+        <span class="stat-val">$${fmt(overview.total_fees, 4)}</span>
+        <span class="stat-lbl">Total Platform Revenue</span>
+        <div class="stat-sub">1.5% of all volume</div>
+      </div>
+      <div class="stat-card" style="--accent:#00e5ff;">
+        <span class="stat-val">$${fmt(overview.total_volume, 4)}</span>
+        <span class="stat-lbl">Total Volume Processed</span>
+      </div>
+      <div class="stat-card" style="--accent:#f59e0b;">
+        <span class="stat-val">$${fmt(overview.today_fees, 6)}</span>
+        <span class="stat-lbl">Revenue Today</span>
+        <div class="stat-sub">Volume: $${fmt(overview.today_volume, 4)}</div>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-bottom:24px;">
+      <div class="table-header">
+        <span class="table-title">DAILY VOLUME — LAST 30 DAYS</span>
+        <span class="table-meta">${days.length} DAYS</span>
+      </div>
+      <div class="chart-container">
+        ${days.map(d => {
+          const vol = Number(d.volume) || 0
+          const pct = Math.max((vol / maxVol) * 100, 2)
+          return `<div class="chart-bar" style="height:${pct}%;background:rgba(0,229,255,0.5);" data-tip="${d.date}: $${fmt(vol,4)}"></div>`
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 20px 16px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">
+        <span>${days[0]?.date || ''}</span>
+        <span>${days[days.length-1]?.date || ''}</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">DAILY BREAKDOWN</span>
+      </div>
+      <table>
+        <thead><tr><th>DATE</th><th>TRANSACTIONS</th><th>VOLUME</th><th>PLATFORM FEE</th></tr></thead>
+        <tbody>
+          ${[...days].reverse().map(d => `
+            <tr>
+              <td class="mono">${d.date}</td>
+              <td class="mono">${fmtN(d.transactions)}</td>
+              <td class="mono cyan">$${fmt(d.volume, 6)}</td>
+              <td class="mono green">$${fmt(d.fees, 6)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+  setContent(html)
+}
+
+// Auto refresh every 30s
+setInterval(() => {
+  if (SECRET) loadCurrentTab()
+}, 30000)
+</script>
+
+</body>
+</html>
