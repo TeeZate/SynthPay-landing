@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SynthPay — Pay per use. Not per month.</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
+
 
   :root {
     --bg:         #F7F5F2;
@@ -223,8 +225,9 @@
   .trust-icon {
     width: 44px; height: 44px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    margin-bottom: 16px; font-size: 22px;
+    margin-bottom: 16px;
   }
+  .trust-icon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .trust-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text1); }
   .trust-card p  { font-size: 13px; color: var(--text3); line-height: 1.7; margin-bottom: 16px; }
   .trust-badge {
@@ -248,8 +251,9 @@
     width: 36px; height: 36px; border-radius: 10px;
     background: var(--surface2); border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
+    flex-shrink: 0; color: var(--text2);
   }
+  .service-chip-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .service-chip-name { font-size: 13px; font-weight: 600; color: var(--text1); margin-bottom: 2px; }
   .service-chip-price { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
 
@@ -386,25 +390,25 @@
 
     <div class="trust-grid">
       <div class="trust-card">
-        <div class="trust-icon" style="background:var(--amber-pale);border:1px solid var(--amber-bd);">💳</div>
+        <div class="trust-icon" style="background:var(--amber-pale);border:1px solid var(--amber-bd);color:var(--amber-d);"><i data-lucide="credit-card"></i></div>
         <h3>No subscription traps</h3>
         <p>Pay $0.002 for one search. Not $20 for a month you barely use. Stop paying for tools you open twice a month.</p>
         <span class="trust-badge" style="background:var(--amber-pale);border:1px solid var(--amber-bd);color:var(--amber-d);">Pay $0.002 · Not $20/month</span>
       </div>
       <div class="trust-card">
-        <div class="trust-icon" style="background:var(--green-pale);border:1px solid rgba(5,150,105,0.2);">🔒</div>
+        <div class="trust-icon" style="background:var(--green-pale);border:1px solid rgba(5,150,105,0.2);color:var(--green);"><i data-lucide="infinity"></i></div>
         <h3>Your balance never expires</h3>
         <p>Unspent credit stays in your wallet. Use it today or six months from now. No deadlines, no pressure, no deductions.</p>
         <span class="trust-badge" style="background:var(--green-pale);border:1px solid rgba(5,150,105,0.2);color:var(--green);">Never expires · Use at your pace</span>
       </div>
       <div class="trust-card">
-        <div class="trust-icon" style="background:var(--surface2);border:1px solid var(--border);">📋</div>
+        <div class="trust-icon" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);"><i data-lucide="receipt"></i></div>
         <h3>Every transaction visible</h3>
         <p>See exactly what you spent, when, and on which service. Every cent on your statement. Nothing hidden, nothing rounded.</p>
         <span class="trust-badge" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);">Real currency · Full history</span>
       </div>
       <div class="trust-card">
-        <div class="trust-icon" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);">🛡️</div>
+        <div class="trust-icon" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);color:#6366f1;"><i data-lucide="shield"></i></div>
         <h3>Stripe holds your money</h3>
         <p>Your credit is held by Stripe — the same company behind millions of businesses globally. Not us. We just do the accounting.</p>
         <span class="trust-badge" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);color:#6366f1;">Funds: Stripe · Accounting: SynthPay</span>
@@ -421,42 +425,42 @@
 
   <div class="services-grid">
     <div class="service-chip">
-      <div class="service-chip-icon">🤖</div>
+      <div class="service-chip-icon"><i data-lucide="bot"></i></div>
       <div>
         <div class="service-chip-name">AI & Language</div>
         <div class="service-chip-price">from $0.001/use</div>
       </div>
     </div>
     <div class="service-chip">
-      <div class="service-chip-icon">📊</div>
+      <div class="service-chip-icon"><i data-lucide="bar-chart-2"></i></div>
       <div>
         <div class="service-chip-name">Data & Analytics</div>
         <div class="service-chip-price">from $0.0005/use</div>
       </div>
     </div>
     <div class="service-chip">
-      <div class="service-chip-icon">🎵</div>
+      <div class="service-chip-icon"><i data-lucide="music"></i></div>
       <div>
         <div class="service-chip-name">Music & Media</div>
         <div class="service-chip-price">from $0.001/use</div>
       </div>
     </div>
     <div class="service-chip">
-      <div class="service-chip-icon">🌍</div>
+      <div class="service-chip-icon"><i data-lucide="globe"></i></div>
       <div>
         <div class="service-chip-name">Location & Maps</div>
         <div class="service-chip-price">from $0.0005/use</div>
       </div>
     </div>
     <div class="service-chip">
-      <div class="service-chip-icon">💳</div>
+      <div class="service-chip-icon"><i data-lucide="trending-up"></i></div>
       <div>
         <div class="service-chip-name">Finance & Rates</div>
         <div class="service-chip-price">from $0.002/use</div>
       </div>
     </div>
     <div class="service-chip">
-      <div class="service-chip-icon">📚</div>
+      <div class="service-chip-icon"><i data-lucide="book-open"></i></div>
       <div>
         <div class="service-chip-name">Education & Tools</div>
         <div class="service-chip-price">from $0.001/use</div>
@@ -521,6 +525,8 @@ async function fetchStats() {
 
 fetchStats()
 setInterval(fetchStats, 15000)
+
+lucide.createIcons()
 </script>
 </body>
 </html>
