@@ -527,6 +527,12 @@ fetchStats()
 setInterval(fetchStats, 15000)
 
 lucide.createIcons()
+
+// Track page view
+fetch('https://trustledger-production.up.railway.app/metrics/pageview', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ page: 'synthpay-home' })
+}).catch(() => {})
 </script>
 </body>
 </html>
